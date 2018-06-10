@@ -22,6 +22,7 @@
           let encoded = Base64.encode(`${userInfo.user}:${userInfo.pass}`);
 
           fetch('/auth', {
+            credentials: 'same-origin',
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

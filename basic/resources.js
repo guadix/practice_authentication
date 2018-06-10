@@ -1,13 +1,38 @@
 const path = require('path');
 const fs = require('fs');
-const { authenticated } = require('./authentication.js');
+
+const storage = {};
+const Auth = require('./authentication.js')(storage);
 
 const handleAuth = (req, res) => {
-  authenticated(req.headers)
+  Auth.authenticated(req.headers)
     .then((granted) => {
-      res.end(JSON.stringify({
-        granted,
-      }));
+      if (granted) {
+        Auth.generateToken(req.headers)
+          .then((accessToken) => {
+            res.setHeader(
+              'Set-Cookie',
+              `access_token=${accessToken}; Secure; HttpOnly; SameSite=strict`,
+            );
+
+            res.end(JSON.stringify({
+              granted,
+              access_token: accessToken,
+            }));
+          })
+          .catch((error) => {
+            console.log(error);
+
+            res.statusCode = 500;
+            res.end();
+          });
+      } else {
+        res.statusCode = 401;
+        res.setHeader('WWW-Authenticate', 'Basic realm="private", charset="UTF-8"');
+        res.end(JSON.stringify({
+          granted,
+        }));
+      }
     })
     .catch((err) => {
       if (err) {
@@ -43,6 +68,10 @@ const rootResource = (req, res) => {
     if (err) {
       notFoundResource(res);
     } else {
+          res.setHeader(
+            'Set-Cookie',
+            `hola=quetal`,
+          );
       res.writeHead(200, { 'Content-type': 'text/html' });
       res.write(data);
       res.end();
@@ -97,7 +126,7 @@ const publicResource = (req, res, parsedUrl) => {
 };
 
 const privateResource = (req, res) => {
-  authenticated(req.headers)
+  Auth.authenticated(req.headers)
     .then((granted) => {
       if (granted) {
         fs.readFile('./private/index.html', (err, data) => {
