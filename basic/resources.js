@@ -1,71 +1,22 @@
-const querystring = require('querystring');
-const bcrypt = require('bcrypt');
 const path = require('path');
 const fs = require('fs');
-const { Base64 } = require('js-base64');
-
-const saltRounds = 10;
-const passwords = {};
-const myPlaintextPassword = '1234';
-
-bcrypt.hash(myPlaintextPassword, saltRounds).then((hash) => {
-  passwords.guadix = hash;
-});
-
-
-const parseBody = (req, isFormData, isEncoded, callback) => {
-  let body = [];
-
-  req
-    .on('data', (chunk) => {
-      body.push(chunk);
-    })
-    .on('end', () => {
-      body = Buffer.concat(body).toString();
-
-      if (isEncoded) {
-        body = Base64.decode(body);
-      }
-
-      if (isFormData) {
-        body = querystring.parse(body);
-      }
-
-      callback(body);
-    });
-};
-
+const { authenticated } = require('./authentication.js');
 
 const handleAuth = (req, res) => {
-  const authHeader = req.headers.Authorization;
-  return ;
-  const user = req.headers;
-  const pass = req.headers;
+  authenticated(req.headers)
+    .then((granted) => {
+      res.end(JSON.stringify({
+        granted,
+      }));
+    })
+    .catch((err) => {
+      if (err) {
+        console.error(err);
 
-  if (!Reflect.has(passwords, user)) {
-    console.log(`Unknown user: ${user}`);
-    res.end('Authenticate, human!');
-    return;
-  }
-
-  const retrievedPass = passwords[user];
-
-  bcrypt.compare(pass, retrievedPass, (err, granted) => {
-    if (err) {
-      console.error(err);
-
-      res.statusCode = 500;
-      res.end();
-
-      return;
-    }
-
-    if (granted) {
-      res.end(`Known human ${user}, welcome!`);
-    } else {
-      res.end('Authenticate, human!');
-    }
-  });
+        res.statusCode = 500;
+        res.end();
+      }
+    });
 };
 
 const notFoundResource = (req, res) => {
@@ -145,8 +96,38 @@ const publicResource = (req, res, parsedUrl) => {
   });
 };
 
+const privateResource = (req, res) => {
+  authenticated(req.headers)
+    .then((granted) => {
+      if (granted) {
+        fs.readFile('./private/index.html', (err, data) => {
+          if (err) {
+            res.statusCode = 500;
+            res.end('Error getting the file.');
+          } else {
+            res.setHeader('Content-type', 'text/html');
+            res.end(data);
+          }
+        });
+      } else {
+        res.statusCode = 401;
+        res.setHeader('WWW-Authenticate', 'Basic realm="private", charset="UTF-8"');
+        res.end();
+      }
+    })
+    .catch((err) => {
+      if (err) {
+        console.error(err);
+
+        res.statusCode = 500;
+        res.end();
+      }
+    });
+};
+
 exports.authResource = authResource;
 exports.rootResource = rootResource;
 exports.notFoundResource = notFoundResource;
 exports.faviconResource = faviconResource;
 exports.publicResource = publicResource;
+exports.privateResource = privateResource;

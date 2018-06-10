@@ -32,6 +32,8 @@ https.createServer(options, (req, res) => {
 
   if (parsedUrl.pathname.match(/^\/public\//i)) {
     resources.publicResource(req, res, parsedUrl);
+  } if (parsedUrl.pathname.match(/^\/private\//i)) {
+    resources.privateResource(req, res);
   } else {
     const resourceMap = {
       '/': 'rootResource',
