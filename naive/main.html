@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <script src="/public/base64.min.js"></script>
+    <script>
+      function loaded() {
+        document.getElementById('login')
+        .addEventListener("submit", (e) => {
+          e.preventDefault();
+
+          const children = [...e.target.getElementsByTagName('input')];
+          const userInfo = children
+            .filter(child => child.name === 'user' || child.name === 'pass') 
+            .reduce((acum, child) => {
+              return Object.assign(acum, {
+                [child.name]: child.value
+              })
+            }, {});
+
+          let encoded = Base64.encode(`${userInfo.user}:${userInfo.pass}`);
+
+          fetch('/auth', {
+            method: 'POST',
+            body: encoded,
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }).then(res => res.text())
+            .catch(error => console.error('Error:', error))
+            .then(response => console.log('Success:', response));
+        });
+      }
+    </script>
+  </head>
+  <body onload="loaded()">
+    <form id="login" name="login" action="/auth" method="POST">
+      <label for="user">User: </label>
+      <input type="text" name="user" id="user" required/>
+      <input type="password" name="pass" id="pass" required/>
+      <input type="submit" />
+    </form>
+
+    <section id="status" name="status">
+      <h3>Not Logged</h3>
+    </section>
+  </body>
+</html>
