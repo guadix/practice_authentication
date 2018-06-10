@@ -2,6 +2,8 @@
 
 All the authentication methods here listed go over a HTTPS server. Thus, certificates are required.
 
+The code is probably incomplete, buggy and the protocols are implemented as I best understand. Please do not use it for any production server.
+
 ### Naive
 This type encodes on Base64 the user input, and sends it on the body. 
 
